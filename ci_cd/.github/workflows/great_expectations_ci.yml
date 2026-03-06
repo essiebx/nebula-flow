@@ -1,0 +1,29 @@
+# ci_cd/.github/workflows/great_expectations_ci.yml
+name: Great Expectations CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'dbt_project/models/marts/**'
+      - 'data_quality/**'
+
+jobs:
+  ge-checkpoint:
+    name: Run GE checkpoints on modified models
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install great-expectations==0.18.* snowflake-sqlalchemy
+      - name: Run GE Gold checkpoint
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+        run: |
+          cd data_quality/great_expectations
+          great_expectations checkpoint run gold_checkpoint

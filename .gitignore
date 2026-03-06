@@ -1,0 +1,52 @@
+# ============================================================
+# .gitignore — Snowflake Retail Intelligence Engine
+# ============================================================
+
+# Secrets — never commit
+.env
+*.pem
+*.key
+
+# dbt artifacts
+dbt_project/target/
+dbt_project/dbt_packages/
+dbt_project/logs/
+dbt_project/profiles.yml          # use profiles.yml.example instead
+
+# Great Expectations uncommitted outputs
+data_quality/great_expectations/uncommitted/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log
+logs/
+
+# Sample data outputs (keep samples, ignore generated large files)
+ingestion/batch/generated/

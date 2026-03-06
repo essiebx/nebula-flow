@@ -1,0 +1,213 @@
+# models/staging/schema.yml
+# ============================================================
+# SOURCE DEFINITIONS + STAGING MODEL TESTS
+#
+# This file does two things:
+#   1. Defines sources (Bronze tables) so dbt can test freshness
+#      and generate lineage from the raw layer upward.
+#   2. Defines column-level tests for every staging model.
+#
+# Run tests with: dbt test --select staging
+# Check freshness: dbt source freshness
+# ============================================================
+
+version: 2
+
+# ── Source definitions (Bronze layer) ────────────────────────
+sources:
+  - name: bronze
+    database: RETAIL_DB
+    schema: BRONZE
+    description: "Raw zone: TPC-DS clones and synthetic Snowpipe tables"
+
+    # Freshness checks — dbt will warn/error if data is too stale
+    # Requires a loaded_at_field (timestamp column) on each table.
+    # TPC-DS clones are static so we skip freshness for those.
+    # raw_clickstream receives live Kafka data so we check it.
+
+    tables:
+      - name: store_sales
+        description: "Raw in-store POS transactions cloned from TPC-DS SF10"
+        columns:
+          - name: ss_item_sk
+            description: "Foreign key to item dimension"
+          - name: ss_ticket_number
+            description: "Transaction identifier (not unique — multiple items per ticket)"
+          - name: ss_net_paid
+            description: "Gross amount paid (before returns)"
+
+      - name: web_sales
+        description: "Raw online sales cloned from TPC-DS SF10"
+
+      - name: catalog_sales
+        description: "Raw catalog/B2B sales cloned from TPC-DS SF10"
+
+      - name: store_returns
+        description: "Raw in-store returns cloned from TPC-DS SF10"
+
+      - name: web_returns
+        description: "Raw online returns cloned from TPC-DS SF10"
+
+      - name: inventory
+        description: "Raw stock levels by item, warehouse, and date"
+
+      - name: item
+        description: "Product catalog: price, category, brand, class"
+
+      - name: customer
+        description: "Customer demographics"
+
+      - name: customer_address
+        description: "Customer geographic data"
+
+      - name: date_dim
+        description: "Calendar dimension: fiscal week, holiday flags, weekend flags"
+
+      - name: promotion
+        description: "Promotion codes, channels, and discount amounts"
+
+      - name: store
+        description: "Store location, region, and market metadata"
+
+      - name: raw_clickstream
+        description: "Synthetic clickstream events from Kafka via Snowpipe"
+        loaded_at_field: _ingested_at    # used for freshness check
+        freshness:
+          warn_after:  {count: 25, period: hour}   # warn if no data in 25h
+          error_after: {count: 49, period: hour}   # error if no data in 49h
+        columns:
+          - name: session_id
+            description: "UUID grouping all events in one browser session"
+          - name: event_type
+            description: "page_view | add_to_cart | purchase"
+
+
+# ── Staging model tests ───────────────────────────────────────
+models:
+
+  - name: stg_store_sales
+    description: "Cleaned store sales: renamed columns, cast types, null-filtered"
+    columns:
+      - name: sale_sk
+        description: "Surrogate key for the sale row"
+        tests: [not_null, unique]
+      - name: item_id
+        tests: [not_null]
+      - name: ticket_number
+        tests: [not_null]
+      - name: gross_amount
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 500000
+
+  - name: stg_web_sales
+    description: "Cleaned web sales: renamed ws_ columns, cast types"
+    columns:
+      - name: sale_sk
+        tests: [not_null, unique]
+      - name: item_id
+        tests: [not_null]
+
+  - name: stg_catalog_sales
+    description: "Cleaned catalog sales: renamed cs_ columns, cast types"
+    columns:
+      - name: sale_sk
+        tests: [not_null, unique]
+      - name: item_id
+        tests: [not_null]
+
+  - name: stg_store_returns
+    description: "Cleaned store returns with return_channel = store"
+    columns:
+      - name: return_sk
+        tests: [not_null, unique]
+      - name: return_channel
+        tests:
+          - accepted_values:
+              values: ['store']
+
+  - name: stg_web_returns
+    description: "Cleaned web returns with return_channel = web"
+    columns:
+      - name: return_sk
+        tests: [not_null, unique]
+      - name: return_channel
+        tests:
+          - accepted_values:
+              values: ['web']
+
+  - name: stg_inventory
+    description: "Cleaned inventory: cast quantities, renamed inv_ prefix"
+    columns:
+      - name: inventory_sk
+        tests: [not_null, unique]
+      - name: quantity_on_hand
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: stg_item
+    description: "Product catalog with price_tier bucketing applied"
+    columns:
+      - name: item_id
+        tests: [not_null, unique]
+      - name: price_tier
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['budget', 'mid', 'premium', 'luxury']
+
+  - name: stg_customer
+    description: "Customer demographics with PII-safe birth_decade instead of birth_year"
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+
+  - name: stg_customer_address
+    description: "Customer addresses with standardized state codes"
+    columns:
+      - name: address_id
+        tests: [not_null, unique]
+
+  - name: stg_date_dim
+    description: "Calendar dimension with fiscal, holiday, and weekend flags"
+    columns:
+      - name: date_sk
+        tests: [not_null, unique]
+      - name: is_holiday
+        tests:
+          - accepted_values:
+              values: [true, false]
+      - name: is_weekend
+        tests:
+          - accepted_values:
+              values: [true, false]
+
+  - name: stg_promotion
+    description: "Promotions with multi-channel flags consolidated to channel_type"
+    columns:
+      - name: promotion_id
+        tests: [not_null, unique]
+
+  - name: stg_store
+    description: "Store metadata with region and state exposed"
+    columns:
+      - name: store_id
+        tests: [not_null, unique]
+
+  - name: stg_clickstream
+    description: "Cleaned Kafka clickstream events"
+    columns:
+      - name: event_sk
+        tests: [not_null, unique]
+      - name: event_type
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['page_view', 'add_to_cart', 'purchase']
+      - name: device_type
+        tests:
+          - accepted_values:
+              values: ['desktop', 'mobile', 'tablet']

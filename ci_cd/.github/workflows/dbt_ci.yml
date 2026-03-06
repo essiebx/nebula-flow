@@ -1,0 +1,89 @@
+# ci_cd/.github/workflows/dbt_ci.yml
+# ============================================================
+# PURPOSE : Run dbt compile + dbt test on every Pull Request.
+#
+# WHAT THIS PROVES TO AN INTERVIEWER:
+#   "Broken dbt models can't merge to main. Every PR is validated
+#    automatically before a human even reviews it."
+#
+# SLIM CI PATTERN:
+#   We use --select state:modified+ which only tests models
+#   that changed in this PR plus their downstream dependents.
+#   This is the dbt-recommended approach for large projects —
+#   avoids running the full test suite on every small change.
+#
+# SECRETS REQUIRED (set in GitHub repo Settings → Secrets):
+#   SNOWFLAKE_ACCOUNT, SNOWFLAKE_USER, SNOWFLAKE_PASSWORD
+# ============================================================
+
+name: dbt CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'dbt_project/**'        # only trigger if dbt files changed
+
+jobs:
+  dbt-ci:
+    name: dbt compile + test
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the PR branch
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python 3.11
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      # Step 3: Install dbt-snowflake
+      - name: Install dbt
+        run: |
+          pip install dbt-snowflake==1.7.*
+
+      # Step 4: Write profiles.yml from secrets
+      # We write it at runtime so credentials are never in the repo
+      - name: Create dbt profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat > ~/.dbt/profiles.yml << EOF
+          snowflake_retail:
+            target: ci
+            outputs:
+              ci:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+                user: ${{ secrets.SNOWFLAKE_USER }}
+                password: ${{ secrets.SNOWFLAKE_PASSWORD }}
+                role: ENGINEER_ROLE
+                warehouse: RETAIL_WH
+                database: RETAIL_DB
+                schema: bronze
+                threads: 4
+                query_tag: dbt_ci_pr_${{ github.event.pull_request.number }}
+          EOF
+
+      # Step 5: Install dbt packages
+      - name: dbt deps
+        working-directory: dbt_project
+        run: dbt deps
+
+      # Step 6: Compile (validates SQL syntax without running queries)
+      - name: dbt compile
+        working-directory: dbt_project
+        run: dbt compile
+
+      # Step 7: Run slim CI tests on changed models only
+      # state:modified+ = changed models AND all downstream dependents
+      # This catches cases where your change breaks a downstream mart
+      - name: dbt test (slim CI)
+        working-directory: dbt_project
+        run: |
+          dbt test --select state:modified+ --defer --state ./target
+        env:
+          DBT_PROFILES_DIR: ~/.dbt

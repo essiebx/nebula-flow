@@ -1,0 +1,44 @@
+# ci_cd/.github/workflows/sqlfluff_ci.yml
+name: SQLFluff Lint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'dbt_project/models/**/*.sql'
+
+jobs:
+  sqlfluff:
+    name: SQLFluff lint changed SQL files
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install SQLFluff
+        run: pip install sqlfluff sqlfluff-templater-dbt dbt-snowflake==1.7.*
+      - name: dbt deps (needed for templater)
+        working-directory: dbt_project
+        run: dbt deps
+      - name: Lint changed SQL files
+        working-directory: dbt_project
+        run: |
+          sqlfluff lint models/ \
+            --dialect snowflake \
+            --templater dbt \
+            --rules L001,L002,L003,L006,L010,L011,L014,L019,L020,L022,L027,L031,L034
+        # Rules selected:
+        # L001: unnecessary trailing whitespace
+        # L002: mixed spaces/tabs
+        # L003: indentation alignment
+        # L006: spaces around operators
+        # L010: keyword capitalisation (SELECT, FROM etc. must be uppercase)
+        # L011: table aliasing
+        # L014: column aliasing
+        # L019: comma placement (leading vs trailing)
+        # L020: table aliases unique
+        # L022: blank line after CTE definition
+        # L027: ambiguous column reference
+        # L031: avoid table alias in FROM/JOIN
+        # L034: SELECT wildcards (warn on SELECT *)

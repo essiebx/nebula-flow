@@ -1,0 +1,87 @@
+# models/marts/schema.yml
+version: 2
+
+models:
+
+  - name: mart_daily_revenue
+    description: "Daily net revenue by channel and region. Primary executive KPI mart."
+    columns:
+      - name: sale_date
+        tests: [not_null]
+      - name: channel
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['store', 'web', 'catalog']
+      - name: net_revenue
+        tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: gross_revenue
+        tests: [not_null]
+      - name: avg_order_value
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: mart_returns_analysis
+    description: "Return rates by product, category, and price tier with promo correlation"
+    columns:
+      - name: item_id
+        tests: [not_null]
+      - name: return_rate_pct
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              max_value: 100
+      - name: price_tier
+        tests:
+          - accepted_values:
+              values: ['budget', 'mid', 'premium', 'luxury']
+
+  - name: mart_inventory_health
+    description: "Latest inventory snapshot per item/warehouse with stockout risk flag"
+    columns:
+      - name: item_id
+        tests: [not_null]
+      - name: warehouse_id
+        tests: [not_null]
+      - name: stockout_risk_flag
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['HIGH', 'MEDIUM', 'LOW']
+      - name: quantity_on_hand
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+  - name: mart_customer_ltv
+    description: "Customer lifetime value, preferred channel, and LTV segment"
+    columns:
+      - name: customer_id
+        tests: [not_null, unique]
+      - name: ltv_segment
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['platinum', 'gold', 'silver', 'bronze']
+      - name: total_lifetime_spend
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: preferred_channel
+        tests:
+          - accepted_values:
+              values: ['store', 'web', 'catalog']
+
+  - name: mart_promotion_effectiveness
+    description: "Revenue lift and return rate delta for each promotion vs baseline"
+    columns:
+      - name: promotion_id
+        tests: [not_null, unique]
+      - name: promo_net_revenue
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0

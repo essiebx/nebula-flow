@@ -1,0 +1,14 @@
+packages:
+  # dbt-utils: utility macros (generate_surrogate_key, pivot, etc.)
+  - package: dbt-labs/dbt_utils
+    version: [">=1.1.0", "<2.0.0"]
+
+  # dbt-expectations: GE-style data quality tests within dbt
+  # e.g. expect_column_values_to_be_between, expect_table_row_count_to_be_between
+  - package: calogica/dbt_expectations
+    version: [">=0.10.0", "<0.11.0"]
+
+  # dbt-date: calendar and fiscal date helpers
+  # e.g. dbt_date.fiscal_year(), dbt_date.week_start()
+  - package: calogica/dbt_date
+    version: [">=0.10.0", "<0.11.0"]

@@ -1,0 +1,36 @@
+
+# scripts/requirements.txt
+# ============================================================
+# Python dependencies for Retail Intelligence Engine
+# Install: pip install -r scripts/requirements.txt
+# ============================================================
+
+# ── Snowflake ─────────────────────────────────────────────────
+snowflake-connector-python[pandas]==3.12.3
+snowflake-sqlalchemy==1.5.*      # used by Great Expectations Snowflake datasource
+
+# ── dbt ───────────────────────────────────────────────────────
+dbt-snowflake==1.7.*             # includes dbt-core
+
+# ── Airflow ───────────────────────────────────────────────────
+apache-airflow==2.7.2
+apache-airflow-providers-snowflake==5.1.*
+apache-airflow-providers-slack==8.0.*
+
+# ── Kafka ─────────────────────────────────────────────────────
+kafka-python==2.0.*
+
+# ── Data generation ───────────────────────────────────────────
+faker==24.*
+
+# ── Data quality ──────────────────────────────────────────────
+great-expectations==0.18.*
+
+# ── Utilities ─────────────────────────────────────────────────
+python-dotenv==1.0.*             # loads .env file
+requests==2.31.*                 # used by Snowpipe REST API consumer
+
+# ── CI/CD linting ─────────────────────────────────────────────
+flake8==7.*
+sqlfluff==3.*
+sqlfluff-templater-dbt==3.*

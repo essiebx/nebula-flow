@@ -1,0 +1,48 @@
+name: retail_intelligence
+version: '1.0.0'
+config-version: 2
+
+profile: snowflake_retail
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+analysis-paths: ["analyses"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# ── Model materialization defaults ───────────────────────────
+# staging     → views (lightweight, no storage cost, always fresh)
+# intermediate → views (joins built on top of staging views)
+# marts        → tables (pre-computed for fast BI queries)
+models:
+  retail_intelligence:
+    staging:
+      +materialized: view
+      +schema: silver
+    intermediate:
+      +materialized: view
+      +schema: silver
+    marts:
+      +materialized: table
+      +schema: gold
+
+# ── Snapshot config ───────────────────────────────────────────
+snapshots:
+  retail_intelligence:
+    +target_schema: silver
+    +strategy: check
+    +unique_key: customer_id
+
+# ── Variable defaults (overridable at runtime) ────────────────
+vars:
+  # Used in mart_inventory_health stockout threshold
+  stockout_high_threshold_days: 7
+  stockout_medium_threshold_days: 14
+
+  # LTV segmentation thresholds (in dollars)
+  ltv_platinum_threshold: 10000
+  ltv_gold_threshold: 5000
+  ltv_silver_threshold: 1000

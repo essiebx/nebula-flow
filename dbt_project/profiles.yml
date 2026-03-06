@@ -1,0 +1,34 @@
+# profiles.yml.example
+# ============================================================
+# Copy this to profiles.yml (gitignored) and fill in your values.
+# OR set the env vars listed below and leave the values as-is.
+# ============================================================
+
+snowflake_retail:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: "{{ env_var('SNOWFLAKE_ROLE', 'ENGINEER_ROLE') }}"
+      warehouse: "{{ env_var('SNOWFLAKE_WAREHOUSE', 'RETAIL_WH') }}"
+      database: "{{ env_var('SNOWFLAKE_DATABASE', 'RETAIL_DB') }}"
+      schema: bronze          # dbt reads sources from bronze
+      threads: 4
+      client_session_keep_alive: false
+      query_tag: dbt_retail_intelligence
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT') }}"
+      user: "{{ env_var('SNOWFLAKE_USER') }}"
+      password: "{{ env_var('SNOWFLAKE_PASSWORD') }}"
+      role: ENGINEER_ROLE
+      warehouse: RETAIL_WH
+      database: RETAIL_DB
+      schema: bronze
+      threads: 8
+      client_session_keep_alive: false
+      query_tag: dbt_retail_intelligence_prod
