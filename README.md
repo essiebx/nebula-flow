@@ -1,5 +1,4 @@
 # nebula-flow
-# Snowflake Retail Intelligence Engine
 
 > Production-pattern Data Engineering pipeline on the **TPC-DS** retail benchmark schema —
 > the same dataset used by Amazon, Google, and Databricks to validate analytical systems at scale.
