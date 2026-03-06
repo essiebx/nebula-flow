@@ -66,7 +66,7 @@ See `/docs/architecture.md` for the full Mermaid diagram.
 
 ```bash
 # 1. Clone and configure
-git clone https://github.com/<you>/snowflake-retail-intelligence
+git clone https://github.com/essiebx/nebula-flow
 cd snowflake-retail-intelligence
 cp .env.example .env           # fill in your Snowflake credentials
 
@@ -103,13 +103,7 @@ dbt docs generate && dbt docs serve   # optional: view lineage graph
 # Kafka UI: http://localhost:8090
 ```
 
----
 
-## Interview Walkthrough
-
-See `/docs/interview_story.md` — STAR-format narrative for every component.
-
----
 
 ## Repository Structure
 
